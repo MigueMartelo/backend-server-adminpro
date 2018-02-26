@@ -5,7 +5,8 @@ var jwt = require('jsonwebtoken');
 var app = express();
 var Usuario = require('../models/usuario');
 
-var clave = 'esT@-eS-L@-Cl@vE-D3l-T0k3N';
+var SEED = require('../config/config').SEED;
+
 
 app.post('/', ( req, res) => {
 
@@ -39,7 +40,7 @@ app.post('/', ( req, res) => {
 
 		// Crear un token!!!
 		usuarioDB.password = ':)';
-		var token = jwt.sign({usuario: usuarioDB}, clave, {expiresIn: 14400}) //4horas
+		var token = jwt.sign({usuario: usuarioDB}, SEED, {expiresIn: 14400}) //4horas
 
 		res.status(200).json({
 			ok: true,
