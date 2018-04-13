@@ -11,78 +11,49 @@ const CLIENT_ID = require('../config/config').GOOGLE_CLIENT_ID;
 const SECRET_ID = require('../config/config').GOOGLE_SECRET_ID;
 
 const {OAuth2Client} = require('google-auth-library');
+const client = new OAuth2Client(CLIENT_ID);
 
 // ============================
 // Autenticación De Google
 // ============================
-app.post('/google', (req, res,next) =>{
-  var token = req.body.token;
-  	const oAuth2Client = new OAuth2Client(CLIENT_ID,SECRET_ID);
-   	const tiket = oAuth2Client.verifyIdToken({
-     	idToken: token
-     	//audience: GOOGLE_CLIENT_ID
-   	});
+async function verify(token) {
+  const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: CLIENT_ID,  // Specify the CLIENT_ID of the app that accesses the backend
+      // Or, if multiple clients access the backend:
+      //[CLIENT_ID_1, CLIENT_ID_2, CLIENT_ID_3]
+  });
 
-   	tiket.then(data => {
-	    Usuario.findOne({email: data.payload.email}, (err, usuario) => {
-	   		if (err) {
-	   			return res.status(500).json({
-	   				ok: false,
-	   				mensaje: 'Error al buscar usuario - login',
-	   				errors: err
-	   			});
-	   		}
-	   		if (usuario){
-	   			if (usuario.google === false){
-	   				return res.status(400).json({
-	   					ok: true,
-	   					mensaje: 'Debe de usar su autenticación normal'
-	   				});
-	   			}else {
-	   				usuario.password = ':)';
+  const payload = ticket.getPayload();
+  //const userid = payload['sub'];
+  // If request specified a G Suite domain:
+  //const domain = payload['hd'];
 
-					var token = jwt.sign({usuario: usuario}, SEED, {expiresIn: 14400}) //4horas
+  return {
+  	nombre: payload.name,
+  	email: payload.email,
+  	img: payload.picture,
+  	google: true
+  }
+}
+verify().catch(console.error);
+app.post('/google', async (req, res) =>{
 
-					res.status(200).json({
-						ok: true,
-						usuario: usuario,
-						token: token,
-						id: usuario._id
-					});
-	   			}
+	var token = req.body.token;
 
-	   		}
-	   		// Si el usuario no existe, creamos unos con los datos de Google
-	   		else {
-	   			var usuario = new Usuario();
+	var googleUser = await verify(token)
+		.catch(e => {
+			return res.status(403).json({
+				ok: false,
+				mensaje: 'Token no válido'
+			});
+		});
 
-	   			usuario.nombre = data.payload.name;
-	   			usuario.email = data.payload.email;
-	   			usuario.password = ':)';
-	   			usuario.img = data.payload.picture;
-	   			usuario.google = true;
-
-	   			usuario.save((err, usuarioDB) => {
-	   				if(err) {
-	   					return res.status(500).json({
-	   						ok: true,
-	   						mensaje: 'Error al guardar usuario - Google',
-	   						errors: err
-	   					});
-	   				}
-
-	   				var token = jwt.sign({usuario: usuarioDB}, SEED, {expiresIn: 14400}) //4horas
-
-					res.status(200).json({
-						ok: true,
-						usuario: usuarioDB,
-						token: token,
-						id: usuarioDB._id
-					});
-	   			});   			
-	   		}
-	   	});
-   	});
+		return res.status(200).json({
+			ok: true,
+			mensaje: 'OK!!!',
+			googleUser: googleUser
+		});
 });
 
 // ============================
