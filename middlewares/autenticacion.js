@@ -5,22 +5,61 @@ var SEED = require('../config/config').SEED;
 // ================================
 // Verificar token
 // ================================
-exports.verificaToken = function(req, res, next){
-	var token = req.query.token;
+exports.verificaToken = function(req, res, next) {
+    var token = req.query.token;
 
-	jwt.verify(token, SEED, (err, decoded) => {
-		
-		if(err){
-			return res.status(401).json({
-				ok: false,
-				mensaje: 'Token incorrecto',
-				errors: err
-			});
-		}
+    jwt.verify(token, SEED, (err, decoded) => {
 
-		req.usuario = decoded.usuario;
+        if (err) {
+            return res.status(401).json({
+                ok: false,
+                mensaje: 'Token incorrecto',
+                errors: err
+            });
+        }
 
-		next();
-	});
+        req.usuario = decoded.usuario;
+
+        next();
+    });
 }
-	
+
+
+// ================================
+// Verificar ADMIN
+// ================================
+exports.verificaADMIN_ROLE = function(req, res, next) {
+    var usuario = req.usuario;
+
+    if (usuario.role === 'ADMIN_ROLE') {
+        next();
+        return;
+    } else {
+        return res.status(401).json({
+            ok: false,
+            mensaje: 'Token incorrecto - No es admin',
+            errors: { message: 'No es administrador, no tiene permitido el cambio' }
+        });
+    }
+
+}
+
+// ================================
+// Verificar ADMIN o MismoUsuario
+// ================================
+exports.verificaADMIN_o_MismoUsuario = function(req, res, next) {
+    var usuario = req.usuario;
+    var id = req.params.id;
+
+    if (usuario.role === 'ADMIN_ROLE' || usuario._id === id) {
+        next();
+        return;
+    } else {
+        return res.status(401).json({
+            ok: false,
+            mensaje: 'Token incorrecto - No es admin ni es el mismo usuario',
+            errors: { message: 'No es administrador, no tiene permitido el cambio' }
+        });
+    }
+
+}
